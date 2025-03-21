@@ -1,0 +1,36 @@
+{
+  "memes": [
+    {
+      "name": "December 2024",
+      "price": 253.93,
+      "change": -1.91,
+      "trend": "random",
+      "streak": -2,
+      "trendCount": 0
+    },
+    {
+      "name": "January 2025",
+      "price": 1216.76,
+      "change": 0.69,
+      "trend": "random",
+      "streak": 0,
+      "trendCount": 0
+    },
+    {
+      "name": "February 2025",
+      "price": 340.24,
+      "change": -1.79,
+      "trend": "random",
+      "streak": -2,
+      "trendCount": 0
+    },
+    {
+      "name": "March 2025",
+      "price": 283.98,
+      "change": -1.61,
+      "trend": "random",
+      "streak": -1,
+      "trendCount": 0
+    }
+  ]
+}

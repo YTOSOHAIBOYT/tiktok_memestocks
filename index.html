@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TikTok Meme Stocks</title>
+  <!-- Include Chart.js via CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: #f4f4f4;
+    }
+    header {
+      background: #333;
+      color: #fff;
+      padding: 16px;
+      text-align: center;
+    }
+    h1 {
+      margin: 0;
+      font-size: 1.8rem;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #fff;
+      border-radius: 5px;
+    }
+    .stocks-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 30px;
+    }
+    .stocks-table th,
+    .stocks-table td {
+      border: 1px solid #ddd;
+      text-align: center;
+      padding: 10px;
+    }
+    .stocks-table th {
+      background: #4CAF50;
+      color: #fff;
+    }
+    .arrow-up {
+      color: green;
+      font-weight: bold;
+    }
+    .arrow-down {
+      color: red;
+      font-weight: bold;
+    }
+    /* Chart container */
+    #chartContainer {
+      width: 100%;
+      height: 400px;
+      margin: 0 auto;
+    }
+    #myChart {
+      width: 100%;
+      max-height: 400px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>TikTok Meme Stocks</h1>
+  </header>
+
+  <div class="container">
+    <!-- Table for current prices -->
+    <table class="stocks-table">
+      <thead>
+        <tr>
+          <th>Meme</th>
+          <th>Main-stream</th>
+          <th>Change (%)</th>
+        </tr>
+      </thead>
+      <tbody id="stockRows">
+        <!-- Filled dynamically by JavaScript -->
+      </tbody>
+    </table>
+
+    <!-- Chart container -->
+    <div id="chartContainer">
+      <canvas id="myChart"></canvas>
+    </div>
+  </div>
+
+  <script>
+    // We'll keep track of historical data for the chart
+    // Example structure: { 'Renegade': [100, 102, 101], 'Blinding Lights': [...], ... }
+    let priceHistory = {};
+
+    // We'll also keep a list of labels for the chart's x-axis
+    let updateCount = 0;
+    let chartLabels = [];
+
+    // Chart.js setup
+    const ctx = document.getElementById('myChart').getContext('2d');
+    const myChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: chartLabels,
+        datasets: []
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: {
+            title: { display: true, text: 'Update #'}
+          },
+          y: {
+            title: { display: true, text: 'main-stream' },
+            beginAtZero: false
+          }
+        }
+      }
+    });
+
+    // Fetch current stocks from server
+    async function fetchStocks() {
+      try {
+        const response = await fetch('/api/stocks');
+        const data = await response.json(); // data is an array of memes
+        return data;
+      } catch (error) {
+        console.error('Error fetching stocks:', error);
+        return [];
+      }
+    }
+
+    // Update the table with the latest data
+    function updateTable(memes) {
+      const stockRows = document.getElementById('stockRows');
+      stockRows.innerHTML = ''; // clear existing rows
+
+      memes.forEach(meme => {
+        // Create a row
+        const row = document.createElement('tr');
+
+        // Meme name
+        const nameCell = document.createElement('td');
+        nameCell.textContent = meme.name;
+        row.appendChild(nameCell);
+
+        // Price
+        const priceCell = document.createElement('td');
+        priceCell.textContent = meme.price.toFixed(2);
+        row.appendChild(priceCell);
+
+        // Change with arrow
+        const changeCell = document.createElement('td');
+        let arrowSpan = document.createElement('span');
+        const changeVal = meme.change;
+
+        if (changeVal > 0) {
+          arrowSpan.textContent = `▲ +${changeVal.toFixed(2)}%`;
+          arrowSpan.classList.add('arrow-up');
+        } else if (changeVal < 0) {
+          arrowSpan.textContent = `▼ ${changeVal.toFixed(2)}%`;
+          arrowSpan.classList.add('arrow-down');
+        } else {
+          arrowSpan.textContent = '0.00%';
+        }
+        changeCell.appendChild(arrowSpan);
+        row.appendChild(changeCell);
+
+        stockRows.appendChild(row);
+      });
+    }
+
+    // Update the chart with the latest data
+    function updateChart(memes) {
+      updateCount++;
+      chartLabels.push(updateCount.toString());
+
+      memes.forEach(meme => {
+        // Initialize if not present
+        if (!priceHistory[meme.name]) {
+          priceHistory[meme.name] = [];
+        }
+        // Push new price
+        priceHistory[meme.name].push(meme.price);
+
+        // If you want to limit how many data points are shown (e.g., last 20),
+        // you can do something like:
+        // if (priceHistory[meme.name].length > 20) {
+        //   priceHistory[meme.name].shift();
+        // }
+      });
+
+      // Also shift chartLabels if limiting
+      // if (chartLabels.length > 20) {
+      //   chartLabels.shift();
+      // }
+
+      // Rebuild datasets
+      const newDatasets = Object.keys(priceHistory).map((memeName, idx) => {
+        // Assign a color (pick any color strategy you like)
+        const colors = ['#4bc0c0', '#ff6384', '#9966ff', '#ff9f40', '#36a2eb'];
+        const color = colors[idx % colors.length];
+
+        return {
+          label: memeName,
+          data: priceHistory[memeName],
+          borderColor: color,
+          fill: false,
+          tension: 0.1
+        };
+      });
+
+      myChart.data.labels = chartLabels;
+      myChart.data.datasets = newDatasets;
+      myChart.update();
+    }
+
+    // Main update function
+    async function refreshData() {
+      const memes = await fetchStocks();
+      updateTable(memes);
+      updateChart(memes);
+    }
+
+    // Initial load
+    refreshData();
+
+    // Refresh data every 5 seconds
+    setInterval(refreshData, 5000);
+  </script>
+</body>
+</html>
