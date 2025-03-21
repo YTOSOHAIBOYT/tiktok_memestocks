@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 // Read initial data from db.json
 let rawData = fs.readFileSync(path.join(__dirname, 'db.json'), 'utf8');
@@ -98,5 +98,6 @@ app.use(express.static(path.join(__dirname)));
 
 // Start the server
 app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
+  console.log(`Server running at http://0.0.0.0:${PORT}`);
 });
+
