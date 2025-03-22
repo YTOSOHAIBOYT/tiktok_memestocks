@@ -85,8 +85,8 @@ function updatePrices() {
   fs.writeFileSync(path.join(__dirname, 'db.json'), JSON.stringify(stockData, null, 2));
 }
 
-// Update prices every 5 seconds
-setInterval(updatePrices, 5000);
+// Update prices every 1 seconds
+setInterval(updatePrices, 1000);
 
 // Endpoint to fetch current stocks
 app.get('/api/stocks', (req, res) => {
