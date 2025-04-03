@@ -1,14 +1,6 @@
 {
   "memes": [
     {
-      "name": "December 2024",
-      "price": 80,
-      "change": -1.91,
-      "trend": "random",
-      "streak": -2,
-      "trendCount": 0
-    },
-    {
       "name": "January 2025",
       "price": 120,
       "change": 0.69,
@@ -30,6 +22,14 @@
       "change": -1.61,
       "trend": "random",
       "streak": -1,
+      "trendCount": 0
+    },
+    {
+      "name": "April 2025",
+      "price": 183,
+      "change": -1.79,
+      "trend": "random",
+      "streak": -2,
       "trendCount": 0
     }
   ]
