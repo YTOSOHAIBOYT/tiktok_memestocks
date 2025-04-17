@@ -91,42 +91,28 @@
   </div>
 
   <script>
-    // We'll keep track of historical data for the chart
-    // Example structure: { 'Renegade': [100, 102, 101], 'Blinding Lights': [...], ... }
-    let priceHistory = {};
+    // 1) Store the very first price of each meme
+    const initialPrices = {};
 
-    // We'll also keep a list of labels for the chart's x-axis
-    let updateCount = 0;
-    let chartLabels = [];
+    // Keep track of how many fetches have happened
+    let isFirstFetch = true;
 
-    // Chart.js setup
-    const ctx = document.getElementById('myChart').getContext('2d');
-    const myChart = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: chartLabels,
-        datasets: []
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          x: {
-            title: { display: true, text: 'Update #'}
-          },
-          y: {
-            title: { display: true, text: 'main-stream' },
-            beginAtZero: false
-          }
-        }
-      }
-    });
+    // Existing priceHistory/chartLabels, chart setup…
 
     // Fetch current stocks from server
     async function fetchStocks() {
       try {
         const response = await fetch('/api/stocks');
         const data = await response.json(); // data is an array of memes
+
+        // On the very first fetch, record initialPrices
+        if (isFirstFetch) {
+          data.forEach(m => {
+            initialPrices[m.name] = m.price;
+          });
+          isFirstFetch = false;
+        }
+
         return data;
       } catch (error) {
         console.error('Error fetching stocks:', error);
@@ -140,33 +126,34 @@
       stockRows.innerHTML = ''; // clear existing rows
 
       memes.forEach(meme => {
-        // Create a row
         const row = document.createElement('tr');
 
-        // Meme name
+        // Name cell
         const nameCell = document.createElement('td');
         nameCell.textContent = meme.name;
         row.appendChild(nameCell);
 
-        // Price
+        // Price cell
         const priceCell = document.createElement('td');
         priceCell.textContent = meme.price.toFixed(2);
         row.appendChild(priceCell);
 
-        // Change with arrow
+        // Change cell (now relative to initialPrices)
         const changeCell = document.createElement('td');
-        let arrowSpan = document.createElement('span');
-        const changeVal = meme.change;
+        const initial = initialPrices[meme.name];
+        const pctChange = ((meme.price - initial) / initial) * 100;
+        const arrowSpan = document.createElement('span');
 
-        if (changeVal > 0) {
-          arrowSpan.textContent = `▲ +${changeVal.toFixed(2)}%`;
+        if (pctChange > 0) {
+          arrowSpan.textContent = `▲ +${pctChange.toFixed(2)}%`;
           arrowSpan.classList.add('arrow-up');
-        } else if (changeVal < 0) {
-          arrowSpan.textContent = `▼ ${changeVal.toFixed(2)}%`;
+        } else if (pctChange < 0) {
+          arrowSpan.textContent = `▼ ${pctChange.toFixed(2)}%`;
           arrowSpan.classList.add('arrow-down');
         } else {
           arrowSpan.textContent = '0.00%';
         }
+
         changeCell.appendChild(arrowSpan);
         row.appendChild(changeCell);
 
@@ -174,50 +161,7 @@
       });
     }
 
-    // Update the chart with the latest data
-    function updateChart(memes) {
-      updateCount++;
-      chartLabels.push(updateCount.toString());
-
-      memes.forEach(meme => {
-        // Initialize if not present
-        if (!priceHistory[meme.name]) {
-          priceHistory[meme.name] = [];
-        }
-        // Push new price
-        priceHistory[meme.name].push(meme.price);
-
-        // If you want to limit how many data points are shown (e.g., last 20),
-        // you can do something like:
-        // if (priceHistory[meme.name].length > 20) {
-        //   priceHistory[meme.name].shift();
-        // }
-      });
-
-      // Also shift chartLabels if limiting
-      // if (chartLabels.length > 20) {
-      //   chartLabels.shift();
-      // }
-
-      // Rebuild datasets
-      const newDatasets = Object.keys(priceHistory).map((memeName, idx) => {
-        // Assign a color (pick any color strategy you like)
-        const colors = ['#4bc0c0', '#ff6384', '#9966ff', '#ff9f40', '#36a2eb'];
-        const color = colors[idx % colors.length];
-
-        return {
-          label: memeName,
-          data: priceHistory[memeName],
-          borderColor: color,
-          fill: false,
-          tension: 0.1
-        };
-      });
-
-      myChart.data.labels = chartLabels;
-      myChart.data.datasets = newDatasets;
-      myChart.update();
-    }
+    // updateChart() stays the same…
 
     // Main update function
     async function refreshData() {
@@ -232,5 +176,6 @@
     // Refresh data every 5 seconds
     setInterval(refreshData, 5000);
   </script>
+
 </body>
 </html>
