@@ -86,7 +86,7 @@ function updatePrices() {
 }
 
 // Update prices every 1 seconds
-setInterval(updatePrices, 1000);
+setInterval(updatePrices, 10);
 
 // Endpoint to fetch current stocks
 app.get('/api/stocks', (req, res) => {
