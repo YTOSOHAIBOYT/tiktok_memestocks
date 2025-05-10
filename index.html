@@ -90,92 +90,148 @@
     </div>
   </div>
 
-  <script>
-    // 1) Store the very first price of each meme
-    const initialPrices = {};
+<script>
+  // 1) Store the very first price of each meme
+  const initialPrices = {};
 
-    // Keep track of how many fetches have happened
-    let isFirstFetch = true;
+  // Track price history and chart state
+  const chartLabels = [];
+  const priceHistory = {};
+  let chart;
+  let isFirstFetch = true;
 
-    // Existing priceHistory/chartLabels, chart setup…
+  // Utility: assign consistent colors per meme
+  function getColor(name) {
+    const colors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'];
+    const index = Object.keys(priceHistory).indexOf(name);
+    return colors[index % colors.length];
+  }
 
-    // Fetch current stocks from server
-    async function fetchStocks() {
-      try {
-        const response = await fetch('/api/stocks');
-        const data = await response.json(); // data is an array of memes
+  // Fetch current stocks from server
+  async function fetchStocks() {
+    try {
+      const response = await fetch('/api/stocks');
+      const data = await response.json(); // data is an array of memes
 
-        // On the very first fetch, record initialPrices
-        if (isFirstFetch) {
-          data.forEach(m => {
-            initialPrices[m.name] = m.price;
-          });
-          isFirstFetch = false;
-        }
-
-        return data;
-      } catch (error) {
-        console.error('Error fetching stocks:', error);
-        return [];
+      if (isFirstFetch) {
+        data.forEach(m => {
+          initialPrices[m.name] = m.price;
+        });
+        isFirstFetch = false;
       }
+
+      return data;
+    } catch (error) {
+      console.error('Error fetching stocks:', error);
+      return [];
     }
+  }
 
-    // Update the table with the latest data
-    function updateTable(memes) {
-      const stockRows = document.getElementById('stockRows');
-      stockRows.innerHTML = ''; // clear existing rows
+  // Update the table with the latest data
+  function updateTable(memes) {
+    const stockRows = document.getElementById('stockRows');
+    stockRows.innerHTML = ''; // clear existing rows
 
-      memes.forEach(meme => {
-        const row = document.createElement('tr');
+    memes.forEach(meme => {
+      const row = document.createElement('tr');
 
-        // Name cell
-        const nameCell = document.createElement('td');
-        nameCell.textContent = meme.name;
-        row.appendChild(nameCell);
+      const nameCell = document.createElement('td');
+      nameCell.textContent = meme.name;
+      row.appendChild(nameCell);
 
-        // Price cell
-        const priceCell = document.createElement('td');
-        priceCell.textContent = meme.price.toFixed(2);
-        row.appendChild(priceCell);
+      const priceCell = document.createElement('td');
+      priceCell.textContent = meme.price.toFixed(2);
+      row.appendChild(priceCell);
 
-        // Change cell (now relative to initialPrices)
-        const changeCell = document.createElement('td');
-        const initial = initialPrices[meme.name];
-        const pctChange = ((meme.price - initial) / initial) * 100;
-        const arrowSpan = document.createElement('span');
+      const changeCell = document.createElement('td');
+      const initial = initialPrices[meme.name];
+      const pctChange = ((meme.price - initial) / initial) * 100;
+      const arrowSpan = document.createElement('span');
 
-        if (pctChange > 0) {
-          arrowSpan.textContent = `▲ +${pctChange.toFixed(2)}%`;
-          arrowSpan.classList.add('arrow-up');
-        } else if (pctChange < 0) {
-          arrowSpan.textContent = `▼ ${pctChange.toFixed(2)}%`;
-          arrowSpan.classList.add('arrow-down');
-        } else {
-          arrowSpan.textContent = '0.00%';
+      if (pctChange > 0) {
+        arrowSpan.textContent = `▲ +${pctChange.toFixed(2)}%`;
+        arrowSpan.classList.add('arrow-up');
+      } else if (pctChange < 0) {
+        arrowSpan.textContent = `▼ ${pctChange.toFixed(2)}%`;
+        arrowSpan.classList.add('arrow-down');
+      } else {
+        arrowSpan.textContent = '0.00%';
+      }
+
+      changeCell.appendChild(arrowSpan);
+      row.appendChild(changeCell);
+      stockRows.appendChild(row);
+    });
+  }
+
+  // Update or draw the chart
+  function updateChart(memes) {
+    const now = new Date().toLocaleTimeString();
+
+    // Add new data to price history
+    memes.forEach(meme => {
+      if (!priceHistory[meme.name]) {
+        priceHistory[meme.name] = [];
+      }
+      priceHistory[meme.name].push(meme.price);
+      // Limit to 20 data points
+      if (priceHistory[meme.name].length > 20) {
+        priceHistory[meme.name].shift();
+      }
+    });
+
+    // Update x-axis labels
+    chartLabels.push(now);
+    if (chartLabels.length > 20) chartLabels.shift();
+
+    // Prepare datasets
+    const datasets = memes.map(meme => ({
+      label: meme.name,
+      data: priceHistory[meme.name],
+      borderColor: getColor(meme.name),
+      fill: false,
+      tension: 0.2
+    }));
+
+    if (!chart) {
+      const ctx = document.getElementById('myChart').getContext('2d');
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: chartLabels,
+          datasets: datasets
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: false
+            }
+          }
         }
-
-        changeCell.appendChild(arrowSpan);
-        row.appendChild(changeCell);
-
-        stockRows.appendChild(row);
       });
+    } else {
+      chart.data.labels = chartLabels;
+      chart.data.datasets = datasets;
+      chart.update();
     }
+  }
 
-    // updateChart() stays the same…
+  // Main update function
+  async function refreshData() {
+    const memes = await fetchStocks();
+    updateTable(memes);
+    updateChart(memes);
+  }
 
-    // Main update function
-    async function refreshData() {
-      const memes = await fetchStocks();
-      updateTable(memes);
-      updateChart(memes);
-    }
+  // Initial load
+  refreshData();
 
-    // Initial load
-    refreshData();
+  // Refresh data every 5 seconds
+  setInterval(refreshData, 5000);
+</script>
 
-    // Refresh data every 5 seconds
-    setInterval(refreshData, 5000);
-  </script>
 
 </body>
 </html>
